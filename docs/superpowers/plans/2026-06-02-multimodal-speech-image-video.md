@@ -1729,6 +1729,34 @@ git commit -m "feat: add minimax video model with polling (Experimental_VideoMod
 
 ---
 
+## Task 9 & 10: Provider wiring — REVISED ARCHITECTURE
+
+> **⚠️ ARCHITECTURE REVISION (supersedes the original Task 9/10 text below).**
+> MiniMax's image/speech/video are NATIVE `/v1` endpoints (`/v1/image_generation`,
+> `/v1/t2a_v2`, `/v1/video_generation`) — NOT part of the Anthropic compat surface and
+> NOT OpenAI-shaped. So they must NOT be wired as if they belonged to either chat
+> compat flavor. Revised plan (user-approved):
+>
+> **Task 9 — Shared media factory (`src/minimax-media.ts`):** a single
+> `createMinimaxMediaModels(config)` that returns `{ image, speech, video }` factory
+> functions, flavor-agnostic, targeting a `/v1` base with `Authorization: Bearer`.
+> This is the one source of truth for media wiring. Has its own focused test.
+>
+> **Task 10 — Wire media into the unified `minimax` provider:** mount
+> `image`/`imageModel`/`speech`/`speechModel`/`video`/`videoModel` on
+> `createMinimaxAnthropic` (whose output IS the default export `minimax`), using
+> `deriveV1BaseURL(baseURL)` to strip `/anthropic` and a Bearer header builder (NOT the
+> anthropic `x-api-key`). `minimaxOpenAI` stays TEXT-ONLY. `embeddingModel` keeps
+> throwing `NoSuchModelError`. User-facing result: `minimax('MiniMax-M2')` = text
+> (anthropic compat), `minimax.image/.speech/.video(...)` = native /v1 media.
+>
+> The detailed model code referenced below (response schemas, mappings) is unchanged
+> and still accurate — only the *mounting location* differs. The implementer receives
+> the exact revised code via the controller's dispatch prompt.
+
+<details>
+<summary>Original Task 9/10 text (superseded — kept for reference)</summary>
+
 ## Task 9: Wire models into the OpenAI-compatible provider
 
 Add `image`/`imageModel`, `speech`/`speechModel`, `video`/`videoModel` to `createMinimax`. Base is already `…/v1`.
@@ -2027,6 +2055,8 @@ Expected: exit 0.
 git add src/minimax-anthropic-provider.ts src/minimax-anthropic-provider.test.ts
 git commit -m "feat: wire image/speech/video into Anthropic-compatible provider"
 ```
+
+</details>
 
 ---
 
