@@ -51,6 +51,15 @@ function getResponseMetadata({
 function mapOpenAICompatibleFinishReason(
   finishReason: string | null | undefined,
 ): LanguageModelV3FinishReason {
+  return {
+    unified: mapOpenAICompatibleFinishReasonUnified(finishReason),
+    raw: finishReason ?? undefined,
+  };
+}
+
+function mapOpenAICompatibleFinishReasonUnified(
+  finishReason: string | null | undefined,
+): LanguageModelV3FinishReason['unified'] {
   switch (finishReason) {
     case 'stop':
       return 'stop';
@@ -62,7 +71,7 @@ function mapOpenAICompatibleFinishReason(
     case 'tool_calls':
       return 'tool-calls';
     default:
-      return 'unknown';
+      return 'other';
   }
 }
 
@@ -306,14 +315,21 @@ export class MinimaxChatLanguageModel implements LanguageModelV3 {
       content,
       finishReason: mapOpenAICompatibleFinishReason(choice.finish_reason),
       usage: {
-        inputTokens: responseBody.usage?.prompt_tokens ?? undefined,
-        outputTokens: responseBody.usage?.completion_tokens ?? undefined,
-        totalTokens: responseBody.usage?.total_tokens ?? undefined,
-        reasoningTokens:
-          responseBody.usage?.completion_tokens_details?.reasoning_tokens ??
-          undefined,
-        cachedInputTokens:
-          responseBody.usage?.prompt_tokens_details?.cached_tokens ?? undefined,
+        inputTokens: {
+          total: responseBody.usage?.prompt_tokens ?? undefined,
+          noCache: undefined,
+          cacheRead:
+            responseBody.usage?.prompt_tokens_details?.cached_tokens ??
+            undefined,
+          cacheWrite: undefined,
+        },
+        outputTokens: {
+          total: responseBody.usage?.completion_tokens ?? undefined,
+          text: undefined,
+          reasoning:
+            responseBody.usage?.completion_tokens_details?.reasoning_tokens ??
+            undefined,
+        },
       },
       providerMetadata,
       request: { body },
@@ -367,7 +383,10 @@ export class MinimaxChatLanguageModel implements LanguageModelV3 {
       hasFinished: boolean;
     }> = [];
 
-    let finishReason: LanguageModelV3FinishReason = 'unknown';
+    let finishReason: LanguageModelV3FinishReason = {
+      unified: 'other',
+      raw: undefined,
+    };
     const usage: {
       completionTokens: number | undefined;
       completionTokensDetails: {
@@ -415,7 +434,7 @@ export class MinimaxChatLanguageModel implements LanguageModelV3 {
             }
 
             if (!chunk.success) {
-              finishReason = 'error';
+              finishReason = { unified: 'error', raw: undefined };
               controller.enqueue({ type: 'error', error: chunk.error });
               return;
             }
@@ -424,7 +443,7 @@ export class MinimaxChatLanguageModel implements LanguageModelV3 {
             metadataExtractor?.processChunk(chunk.rawValue);
 
             if ('error' in value) {
-              finishReason = 'error';
+              finishReason = { unified: 'error', raw: undefined };
               controller.enqueue({ type: 'error', error: value.error.message });
               return;
             }
@@ -706,13 +725,18 @@ export class MinimaxChatLanguageModel implements LanguageModelV3 {
               type: 'finish',
               finishReason,
               usage: {
-                inputTokens: usage.promptTokens ?? undefined,
-                outputTokens: usage.completionTokens ?? undefined,
-                totalTokens: usage.totalTokens ?? undefined,
-                reasoningTokens:
-                  usage.completionTokensDetails.reasoningTokens ?? undefined,
-                cachedInputTokens:
-                  usage.promptTokensDetails.cachedTokens ?? undefined,
+                inputTokens: {
+                  total: usage.promptTokens ?? undefined,
+                  noCache: undefined,
+                  cacheRead: usage.promptTokensDetails.cachedTokens ?? undefined,
+                  cacheWrite: undefined,
+                },
+                outputTokens: {
+                  total: usage.completionTokens ?? undefined,
+                  text: undefined,
+                  reasoning:
+                    usage.completionTokensDetails.reasoningTokens ?? undefined,
+                },
               },
               providerMetadata,
             });
