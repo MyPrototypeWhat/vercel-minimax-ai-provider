@@ -15,7 +15,7 @@
     "build:watch": "pnpm clean && tsup -d --watch",
     "clean": "rm -rf dist",
     "lint": "eslint \"src/**/*.ts\"",
-    "type-check": "tsc --noEmit -p tsconfig.typecheck.json",
+    "type-check": "tsc --noEmit",
     "prettier-check": "prettier --check \"./**/*.ts*\"",
     "prepare": "husky",
     "test": "pnpm test:node && pnpm test:edge",
