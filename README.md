@@ -101,10 +101,11 @@ const { text } = await generateText({
 
 ## Image, Speech & Video
 
-Beyond text, the default `minimax` provider also exposes MiniMax's native
-image, speech (text-to-speech), and video models. These use MiniMax's own
-`/v1` endpoints (they are independent of the Anthropic/OpenAI text-compatibility
-modes), so they work the same regardless of which text instance you use.
+Beyond text, **both** provider instances (`minimax` and `minimaxOpenAI`) expose
+MiniMax's native image, speech (text-to-speech), and video models. These use
+MiniMax's own `/v1` endpoints (independent of the Anthropic/OpenAI text-compatibility
+modes), so they behave identically on either instance — the examples below use
+the default `minimax`, but `minimaxOpenAI.image(...)` etc. work the same.
 
 ### Image generation
 

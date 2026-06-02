@@ -1,7 +1,10 @@
 import {
+  Experimental_VideoModelV3,
+  ImageModelV3,
   LanguageModelV3,
   NoSuchModelError,
   ProviderV3,
+  SpeechModelV3,
 } from '@ai-sdk/provider';
 import {
   FetchFunction,
@@ -10,6 +13,10 @@ import {
 import { MinimaxChatModelId } from './minimax-chat-options';
 import { MinimaxChatLanguageModel } from './minimax-openai-language-model';
 import { createBearerHeaders } from './minimax-shared';
+import { createMinimaxMediaModels } from './minimax-media';
+import { MinimaxImageModelId } from './minimax-image-options';
+import { MinimaxSpeechModelId } from './minimax-speech-options';
+import { MinimaxVideoModelId } from './minimax-video-options';
 
 export interface MinimaxProviderSettings {
   /**
@@ -47,6 +54,24 @@ Creates a MiniMax model for text generation.
 Creates a MiniMax chat model for text generation.
 */
   chat(modelId: MinimaxChatModelId): LanguageModelV3;
+
+  /**
+Creates a MiniMax image model (native MiniMax `/v1` endpoint).
+*/
+  image(modelId: MinimaxImageModelId): ImageModelV3;
+  imageModel(modelId: MinimaxImageModelId): ImageModelV3;
+
+  /**
+Creates a MiniMax speech (text-to-speech) model (native MiniMax `/v1` endpoint).
+*/
+  speech(modelId: MinimaxSpeechModelId): SpeechModelV3;
+  speechModel(modelId: MinimaxSpeechModelId): SpeechModelV3;
+
+  /**
+Creates a MiniMax video model (native MiniMax `/v1` endpoint, async polling).
+*/
+  video(modelId: MinimaxVideoModelId): Experimental_VideoModelV3;
+  videoModel(modelId: MinimaxVideoModelId): Experimental_VideoModelV3;
 }
 
 export function createMinimax(
@@ -67,6 +92,15 @@ export function createMinimax(
     });
   };
 
+  // MiniMax's image/speech/video are native `/v1` endpoints with Bearer auth —
+  // the same transport this OpenAI-compatible instance already uses, so the
+  // shared media factory plugs in directly.
+  const mediaModels = createMinimaxMediaModels({
+    baseURL,
+    headers: getHeaders,
+    fetch: options.fetch,
+  });
+
   const provider = (modelId: MinimaxChatModelId) =>
     createLanguageModel(modelId);
 
@@ -74,11 +108,15 @@ export function createMinimax(
   provider.chat = createLanguageModel;
   provider.specificationVersion = 'v3' as const;
 
+  provider.image = mediaModels.image;
+  provider.imageModel = mediaModels.image;
+  provider.speech = mediaModels.speech;
+  provider.speechModel = mediaModels.speech;
+  provider.video = mediaModels.video;
+  provider.videoModel = mediaModels.video;
+
   provider.embeddingModel = (modelId: string) => {
     throw new NoSuchModelError({ modelId, modelType: 'embeddingModel' });
-  };
-  provider.imageModel = (modelId: string) => {
-    throw new NoSuchModelError({ modelId, modelType: 'imageModel' });
   };
 
   return provider;
