@@ -349,7 +349,7 @@ export function hexToUint8Array(hex: string): Uint8Array {
   const length = hex.length >> 1;
   const out = new Uint8Array(length);
   for (let i = 0; i < length; i++) {
-    out[i] = parseInt(hex.substr(i * 2, 2), 16);
+    out[i] = parseInt(hex.slice(i * 2, i * 2 + 2), 16);
   }
   return out;
 }
