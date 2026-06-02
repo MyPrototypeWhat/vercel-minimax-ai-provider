@@ -10,6 +10,8 @@
 
 **Reference (the spec):** `docs/superpowers/specs/2026-06-02-multimodal-speech-image-video-design.md`
 
+> **Progress:** Task 0 (test-config fix) and Task 1 (dep upgrade + LanguageModelV3 breaking-change migration) are DONE and committed (`64f4857`), verified green: `pnpm type-check` exit 0, `pnpm test` 17 pass (node + edge). Remaining: Tasks 2-13 (the new model files, provider wiring, exports, README).
+
 ---
 
 ## Conventions used throughout this plan
