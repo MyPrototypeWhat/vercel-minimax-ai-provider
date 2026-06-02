@@ -109,6 +109,8 @@ describe('minimaxAnthropic provider', () => {
         size: undefined,
         aspectRatio: undefined,
         seed: undefined,
+        files: undefined,
+        mask: undefined,
         providerOptions: {},
       });
 

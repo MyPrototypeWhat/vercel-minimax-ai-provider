@@ -53,6 +53,8 @@ describe('createMinimaxMediaModels', () => {
       size: undefined,
       aspectRatio: undefined,
       seed: undefined,
+      files: undefined,
+      mask: undefined,
       providerOptions: {},
     });
 

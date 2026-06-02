@@ -46,6 +46,8 @@ describe('MinimaxImageModel', () => {
       size: '1024x768',
       aspectRatio: undefined,
       seed: 7,
+      files: undefined,
+      mask: undefined,
       providerOptions: {},
     });
 
@@ -78,6 +80,8 @@ describe('MinimaxImageModel', () => {
       size: undefined,
       aspectRatio: '16:9',
       seed: undefined,
+      files: undefined,
+      mask: undefined,
       providerOptions: {},
     });
 
@@ -101,6 +105,8 @@ describe('MinimaxImageModel', () => {
       size: '512x512',
       aspectRatio: '16:9',
       seed: undefined,
+      files: undefined,
+      mask: undefined,
       providerOptions: {},
     });
 
@@ -129,6 +135,8 @@ describe('MinimaxImageModel', () => {
       size: undefined,
       aspectRatio: undefined,
       seed: undefined,
+      files: undefined,
+      mask: undefined,
       providerOptions: {
         minimax: {
           promptOptimizer: true,
@@ -155,6 +163,8 @@ describe('MinimaxImageModel', () => {
         size: undefined,
         aspectRatio: undefined,
         seed: undefined,
+        files: undefined,
+        mask: undefined,
         providerOptions: {},
       }),
     ).rejects.toThrow(/auth failed/);
