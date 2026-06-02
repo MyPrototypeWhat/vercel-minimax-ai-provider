@@ -19,7 +19,7 @@ import { createMinimaxMediaModels } from './minimax-media';
 import { MinimaxImageModelId } from './minimax-image-options';
 import { MinimaxSpeechModelId } from './minimax-speech-options';
 import { MinimaxVideoModelId } from './minimax-video-options';
-import { deriveV1BaseURL } from './minimax-shared';
+import { deriveV1BaseURL, createBearerHeaders } from './minimax-shared';
 
 export interface MinimaxAnthropicProviderSettings {
   /**
@@ -117,18 +117,7 @@ export function createMinimaxAnthropic(
   // anthropic base and build a Bearer header for these media models.
   const mediaModels = createMinimaxMediaModels({
     baseURL: deriveV1BaseURL(baseURL),
-    headers: () =>
-      withUserAgentSuffix(
-        {
-          Authorization: `Bearer ${loadApiKey({
-            apiKey: options.apiKey,
-            environmentVariableName: 'MINIMAX_API_KEY',
-            description: 'MiniMax API key',
-          })}`,
-          ...options.headers,
-        },
-        `minimax-ai-provider`,
-      ),
+    headers: createBearerHeaders(options),
     fetch: options.fetch,
   });
 

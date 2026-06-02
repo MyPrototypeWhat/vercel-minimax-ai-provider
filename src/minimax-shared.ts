@@ -1,4 +1,28 @@
 import { APICallError } from '@ai-sdk/provider';
+import { loadApiKey, withUserAgentSuffix } from '@ai-sdk/provider-utils';
+
+/**
+ * Builds the `Authorization: Bearer <key>` headers used by MiniMax's OpenAI-compatible
+ * chat endpoint and all native media (`/v1`) endpoints. (The Anthropic-compatible chat
+ * endpoint uses `x-api-key` instead and does not go through this.)
+ */
+export function createBearerHeaders(options: {
+  apiKey?: string;
+  headers?: Record<string, string>;
+}): () => Record<string, string | undefined> {
+  return () =>
+    withUserAgentSuffix(
+      {
+        Authorization: `Bearer ${loadApiKey({
+          apiKey: options.apiKey,
+          environmentVariableName: 'MINIMAX_API_KEY',
+          description: 'MiniMax API key',
+        })}`,
+        ...options.headers,
+      },
+      `minimax-ai-provider`,
+    );
+}
 
 /**
  * MiniMax base_resp envelope. status_code === 0 means success; any other value is a
