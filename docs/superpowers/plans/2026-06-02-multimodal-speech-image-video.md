@@ -83,16 +83,143 @@ In `package.json` `dependencies`, set:
 Run: `pnpm install`
 Expected: resolves without peer-dependency errors; updates `pnpm-lock.yaml`.
 
-- [ ] **Step 3: Verify the existing code still type-checks and tests pass**
+- [ ] **Step 3: Observe the breaking-change compile errors**
+
+Run: `pnpm type-check`
+Expected: FAIL. Stable `@ai-sdk/provider@3.0.10` reshaped three `LanguageModelV3` types vs the old beta, so the EXISTING language model + message converter no longer compile. You will see errors like:
+- `src/minimax-openai-language-model.ts(...): Type 'number | undefined' is not assignable to type '{ total: ...; text: ...; reasoning: ... }'` (usage shape)
+- `src/minimax-openai-language-model.ts(...): Type 'string' is not assignable to type 'LanguageModelV3FinishReason'` (finish reason shape)
+- `src/convert-to-minimax-chat-messages.ts(...): Property 'output' does not exist on type '... | LanguageModelV3ToolApprovalResponsePart'` (tool message union)
+
+Steps 4-6 fix each. (These are migrations of EXISTING code forced by the upgrade — not the new modalities.)
+
+- [ ] **Step 4: Migrate `LanguageModelV3Usage` (flat → nested) in the language model**
+
+In `src/minimax-openai-language-model.ts`, there are two `usage:` return blocks (one in `doGenerate`, one in `doStream`'s `flush`). The new shape requires nested `inputTokens`/`outputTokens` objects with all keys present.
+
+In `doGenerate` (the block currently returning `inputTokens: responseBody.usage?.prompt_tokens ?? undefined, ...`), replace with:
+
+```ts
+      usage: {
+        inputTokens: {
+          total: responseBody.usage?.prompt_tokens ?? undefined,
+          noCache: undefined,
+          cacheRead:
+            responseBody.usage?.prompt_tokens_details?.cached_tokens ??
+            undefined,
+          cacheWrite: undefined,
+        },
+        outputTokens: {
+          total: responseBody.usage?.completion_tokens ?? undefined,
+          text: undefined,
+          reasoning:
+            responseBody.usage?.completion_tokens_details?.reasoning_tokens ??
+            undefined,
+        },
+      },
+```
+
+In `doStream`'s `flush` (the block currently returning `inputTokens: usage.promptTokens ?? undefined, ...`), replace with:
+
+```ts
+              usage: {
+                inputTokens: {
+                  total: usage.promptTokens ?? undefined,
+                  noCache: undefined,
+                  cacheRead: usage.promptTokensDetails.cachedTokens ?? undefined,
+                  cacheWrite: undefined,
+                },
+                outputTokens: {
+                  total: usage.completionTokens ?? undefined,
+                  text: undefined,
+                  reasoning:
+                    usage.completionTokensDetails.reasoningTokens ?? undefined,
+                },
+              },
+```
+
+(The `acceptedPredictionTokens` / `rejectedPredictionTokens` provider-metadata handling around these blocks is unchanged.)
+
+- [ ] **Step 5: Migrate `LanguageModelV3FinishReason` (string union → `{ unified, raw }`)**
+
+In `src/minimax-openai-language-model.ts`, replace the `mapOpenAICompatibleFinishReason` function with a version that returns the object shape (note: `'unknown'` was removed from the union → use `'other'`):
+
+```ts
+function mapOpenAICompatibleFinishReason(
+  finishReason: string | null | undefined,
+): LanguageModelV3FinishReason {
+  return {
+    unified: mapOpenAICompatibleFinishReasonUnified(finishReason),
+    raw: finishReason ?? undefined,
+  };
+}
+
+function mapOpenAICompatibleFinishReasonUnified(
+  finishReason: string | null | undefined,
+): LanguageModelV3FinishReason['unified'] {
+  switch (finishReason) {
+    case 'stop':
+      return 'stop';
+    case 'length':
+      return 'length';
+    case 'content_filter':
+      return 'content-filter';
+    case 'function_call':
+    case 'tool_calls':
+      return 'tool-calls';
+    default:
+      return 'other';
+  }
+}
+```
+
+Then fix the three raw assignments in `doStream`. The initializer:
+
+```ts
+    let finishReason: LanguageModelV3FinishReason = {
+      unified: 'other',
+      raw: undefined,
+    };
+```
+
+And the two `finishReason = 'error';` lines (in the `!chunk.success` and `'error' in value` branches) become:
+
+```ts
+              finishReason = { unified: 'error', raw: undefined };
+```
+
+(The `finishReason = mapOpenAICompatibleFinishReason(choice.finish_reason)` call site needs no change — the helper now returns the object.)
+
+- [ ] **Step 6: Migrate the tool-message union in the converter**
+
+In `src/convert-to-minimax-chat-messages.ts`, the `case 'tool':` loop now iterates `Array<ToolResultPart | ToolApprovalResponsePart>`. Skip approval-response parts at the top of the loop so the rest narrows to `ToolResultPart`:
+
+```ts
+      case 'tool': {
+        for (const toolResponse of content) {
+          // Tool approval responses are not sent to the chat API.
+          if (toolResponse.type === 'tool-approval-response') {
+            continue;
+          }
+
+          const output = toolResponse.output;
+
+          let contentValue: string;
+          switch (output.type) {
+```
+
+(The rest of the loop body — the `output.type` switch and the `messages.push({ role: 'tool', ... })` — is unchanged. This also resolves the "`contentValue` is used before being assigned" error because the switch is now exhaustive over `ToolResultPart` outputs.)
+
+- [ ] **Step 7: Verify the existing code type-checks and all tests pass**
 
 Run: `pnpm type-check && pnpm test`
-Expected: type-check exit 0; all 17 tests pass in both node and edge. (This proves the anthropic `/internal` import and the language model still compile against stable.)
+Expected: type-check exit 0; all 17 existing tests pass in both node and edge. This proves the anthropic `/internal` import still works and the language model is correctly migrated to stable.
 
-- [ ] **Step 4: Commit**
+- [ ] **Step 8: Commit**
 
 ```bash
-git add package.json pnpm-lock.yaml
-git commit -m "chore: upgrade @ai-sdk deps to latest stable"
+git add package.json pnpm-lock.yaml src/minimax-openai-language-model.ts src/convert-to-minimax-chat-messages.ts
+git commit -m "chore: upgrade @ai-sdk deps to latest stable and migrate LanguageModelV3 breaking changes"
 ```
 
 ---
@@ -540,7 +667,7 @@ Create `src/minimax-image-model.ts`:
 ```ts
 import {
   ImageModelV3,
-  ImageModelV3CallWarning,
+  SharedV3Warning,
 } from '@ai-sdk/provider';
 import {
   combineHeaders,
@@ -612,7 +739,7 @@ export class MinimaxImageModel implements ImageModelV3 {
   }: Parameters<ImageModelV3['doGenerate']>[0]): Promise<
     Awaited<ReturnType<ImageModelV3['doGenerate']>>
   > {
-    const warnings: Array<ImageModelV3CallWarning> = [];
+    const warnings: Array<SharedV3Warning> = [];
 
     const options =
       (await parseProviderOptions({
@@ -691,7 +818,7 @@ Expected: PASS — all 6 cases green.
 - [ ] **Step 5: Type-check**
 
 Run: `pnpm type-check`
-Expected: exit 0. (If `ImageModelV3CallWarning` is not exported, fall back to `SharedV3Warning` from `@ai-sdk/provider` — both are valid; the warning object shape is identical.)
+Expected: exit 0. (`SharedV3Warning` is the correct warning type — `ImageModelV3CallWarning` is NOT exported by `@ai-sdk/provider@3.0.10`. The warning object shape is `{ type: 'unsupported', feature, details? }`.)
 
 - [ ] **Step 6: Commit**
 
@@ -901,7 +1028,7 @@ Create `src/minimax-speech-model.ts`:
 ```ts
 import {
   SpeechModelV3,
-  SpeechModelV3CallWarning,
+  SharedV3Warning,
 } from '@ai-sdk/provider';
 import {
   combineHeaders,
@@ -961,7 +1088,7 @@ export class MinimaxSpeechModel implements SpeechModelV3 {
   ): Promise<Awaited<ReturnType<SpeechModelV3['doGenerate']>>> {
     const { text, voice, outputFormat, speed, language, providerOptions, headers, abortSignal } =
       options;
-    const warnings: Array<SpeechModelV3CallWarning> = [];
+    const warnings: Array<SharedV3Warning> = [];
 
     const opts =
       (await parseProviderOptions({
@@ -1050,7 +1177,7 @@ Expected: PASS.
 - [ ] **Step 6: Type-check**
 
 Run: `pnpm type-check`
-Expected: exit 0. (If `SpeechModelV3CallWarning` is not exported, use `SharedV3Warning` from `@ai-sdk/provider`. Also: `providerMetadata` values must be JSON — `extra_info` is parsed JSON so this is safe; if type-check complains, cast via `as Record<string, JSONValue>` imported from `@ai-sdk/provider`.)
+Expected: exit 0. (`SharedV3Warning` is the correct warning type — `SpeechModelV3CallWarning` is NOT exported. Also: `providerMetadata` values must be JSON — `extra_info` is parsed JSON so this is safe; if type-check complains, cast via `as Record<string, JSONValue>` imported from `@ai-sdk/provider`.)
 
 - [ ] **Step 7: Commit**
 
