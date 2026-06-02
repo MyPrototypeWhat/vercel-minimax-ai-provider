@@ -3,6 +3,7 @@ import {
   hexToUint8Array,
   deriveV1BaseURL,
   mapVideoResolution,
+  mapLanguageBoost,
   checkMinimaxBaseResp,
 } from './minimax-shared';
 import { APICallError } from '@ai-sdk/provider';
@@ -49,6 +50,26 @@ describe('mapVideoResolution', () => {
 
   it('passes through an unknown size unchanged', () => {
     expect(mapVideoResolution('640x640')).toBe('640x640');
+  });
+});
+
+describe('mapLanguageBoost', () => {
+  it('maps ISO 639-1 codes to MiniMax language names', () => {
+    expect(mapLanguageBoost('en')).toBe('English');
+    expect(mapLanguageBoost('zh')).toBe('Chinese');
+    expect(mapLanguageBoost('ja')).toBe('Japanese');
+  });
+
+  it('is case-insensitive', () => {
+    expect(mapLanguageBoost('EN')).toBe('English');
+  });
+
+  it('passes through "auto"', () => {
+    expect(mapLanguageBoost('auto')).toBe('auto');
+  });
+
+  it('returns undefined for an unknown code', () => {
+    expect(mapLanguageBoost('xx')).toBeUndefined();
   });
 });
 

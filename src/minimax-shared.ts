@@ -49,6 +49,45 @@ export function mapVideoResolution(size: string): string {
 }
 
 /**
+ * MiniMax's `language_boost` expects full English language names (e.g. "English",
+ * "Chinese") or "auto", whereas the AI SDK `language` field is an ISO 639-1 code
+ * (e.g. "en", "zh") or "auto". Map common ISO codes to MiniMax names. Returns
+ * `undefined` for an unknown code so the caller can warn and omit the field.
+ */
+const LANGUAGE_BOOST_MAP: Record<string, string> = {
+  auto: 'auto',
+  zh: 'Chinese',
+  yue: 'Chinese,Yue',
+  en: 'English',
+  ar: 'Arabic',
+  ru: 'Russian',
+  es: 'Spanish',
+  fr: 'French',
+  pt: 'Portuguese',
+  de: 'German',
+  tr: 'Turkish',
+  nl: 'Dutch',
+  uk: 'Ukrainian',
+  vi: 'Vietnamese',
+  id: 'Indonesian',
+  ja: 'Japanese',
+  it: 'Italian',
+  ko: 'Korean',
+  th: 'Thai',
+  pl: 'Polish',
+  ro: 'Romanian',
+  el: 'Greek',
+  cs: 'Czech',
+  fi: 'Finnish',
+  hi: 'Hindi',
+};
+
+export function mapLanguageBoost(language: string): string | undefined {
+  if (language === 'auto') return 'auto';
+  return LANGUAGE_BOOST_MAP[language.toLowerCase()];
+}
+
+/**
  * Throws an APICallError if the MiniMax base_resp reports a non-zero status_code.
  * MiniMax returns business errors with HTTP 200, so the standard failed-response
  * handler never sees them.

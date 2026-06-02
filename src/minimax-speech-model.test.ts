@@ -60,6 +60,10 @@ describe('MinimaxSpeechModel', () => {
     ]);
     expect(result.response.modelId).toBe('speech-2.6-hd');
     expect(result.response.timestamp).toEqual(TEST_DATE);
+    expect(result.providerMetadata?.minimax).toMatchObject({
+      audio_length: 1000,
+      audio_sample_rate: 32000,
+    });
   });
 
   it('uses the default voice_id when voice is omitted', async () => {
@@ -107,5 +111,57 @@ describe('MinimaxSpeechModel', () => {
     await expect(
       model.doGenerate({ text: 'hi', providerOptions: {} }),
     ).rejects.toThrow(/invalid params/);
+  });
+
+  it('maps an ISO language code to language_boost', async () => {
+    let captured: any;
+    const model = makeModel(async (_url, init) => {
+      captured = JSON.parse((init as RequestInit).body as string);
+      return jsonResponse({
+        data: { audio: '00' },
+        base_resp: { status_code: 0 },
+      });
+    });
+
+    await model.doGenerate({ text: 'hi', language: 'en', providerOptions: {} });
+    expect(captured.language_boost).toBe('English');
+  });
+
+  it('warns and omits language_boost for an unsupported language code', async () => {
+    let captured: any;
+    const model = makeModel(async (_url, init) => {
+      captured = JSON.parse((init as RequestInit).body as string);
+      return jsonResponse({
+        data: { audio: '00' },
+        base_resp: { status_code: 0 },
+      });
+    });
+
+    const result = await model.doGenerate({
+      text: 'hi',
+      language: 'xx',
+      providerOptions: {},
+    });
+    expect(captured.language_boost).toBeUndefined();
+    expect(
+      result.warnings.some(w => w.type === 'unsupported' && w.feature === 'language'),
+    ).toBe(true);
+  });
+
+  it('warns when unsupported instructions are provided', async () => {
+    const model = makeModel(async () =>
+      jsonResponse({ data: { audio: '00' }, base_resp: { status_code: 0 } }),
+    );
+
+    const result = await model.doGenerate({
+      text: 'hi',
+      instructions: 'speak slowly',
+      providerOptions: {},
+    });
+    expect(
+      result.warnings.some(
+        w => w.type === 'unsupported' && w.feature === 'instructions',
+      ),
+    ).toBe(true);
   });
 });

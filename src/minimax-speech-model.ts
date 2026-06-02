@@ -18,7 +18,11 @@ import {
   DEFAULT_MINIMAX_VOICE_ID,
 } from './minimax-speech-options';
 import { defaultMinimaxErrorStructure } from './minimax-chat-options';
-import { checkMinimaxBaseResp, hexToUint8Array } from './minimax-shared';
+import {
+  checkMinimaxBaseResp,
+  hexToUint8Array,
+  mapLanguageBoost,
+} from './minimax-shared';
 
 export interface MinimaxSpeechModelConfig {
   provider: string;
@@ -64,12 +68,31 @@ export class MinimaxSpeechModel implements SpeechModelV3 {
       voice,
       outputFormat,
       speed,
+      instructions,
       language,
       providerOptions,
       headers,
       abortSignal,
     } = options;
     const warnings: Array<SharedV3Warning> = [];
+
+    if (instructions != null) {
+      warnings.push({ type: 'unsupported', feature: 'instructions' });
+    }
+
+    // MiniMax's language_boost wants full language names ("English"), not the
+    // ISO 639-1 codes ("en") the SDK passes. Map known codes; warn + omit unknowns.
+    let languageBoost: string | undefined;
+    if (language != null) {
+      languageBoost = mapLanguageBoost(language);
+      if (languageBoost == null) {
+        warnings.push({
+          type: 'unsupported',
+          feature: 'language',
+          details: `Unsupported language code "${language}"; it was ignored.`,
+        });
+      }
+    }
 
     const opts =
       (await parseProviderOptions({
@@ -100,7 +123,7 @@ export class MinimaxSpeechModel implements SpeechModelV3 {
       output_format: 'hex',
       voice_setting: voiceSetting,
       audio_setting: audioSetting,
-      language_boost: language,
+      language_boost: languageBoost,
       pronunciation_dict: opts.pronunciationDict,
     };
 
