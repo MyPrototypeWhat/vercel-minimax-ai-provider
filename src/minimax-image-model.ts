@@ -66,6 +66,8 @@ export class MinimaxImageModel implements ImageModelV3 {
     size,
     aspectRatio,
     seed,
+    files,
+    mask,
     providerOptions,
     headers,
     abortSignal,
@@ -73,6 +75,20 @@ export class MinimaxImageModel implements ImageModelV3 {
     Awaited<ReturnType<ImageModelV3['doGenerate']>>
   > {
     const warnings: Array<SharedV3Warning> = [];
+
+    // This is a text-to-image model; image-to-image is expressed via the
+    // `subjectReference` provider option, not the SDK's edit-style inputs.
+    if (files != null) {
+      warnings.push({
+        type: 'unsupported',
+        feature: 'files',
+        details:
+          'Image editing inputs are not supported. Use the subjectReference provider option for image-to-image.',
+      });
+    }
+    if (mask != null) {
+      warnings.push({ type: 'unsupported', feature: 'mask' });
+    }
 
     const options =
       (await parseProviderOptions({

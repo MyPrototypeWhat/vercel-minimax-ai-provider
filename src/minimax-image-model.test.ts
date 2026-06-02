@@ -159,4 +159,27 @@ describe('MinimaxImageModel', () => {
       }),
     ).rejects.toThrow(/auth failed/);
   });
+
+  it('warns when unsupported files/mask inputs are provided', async () => {
+    const model = makeModel(async () =>
+      jsonResponse({
+        data: { image_base64: ['AAAA'] },
+        base_resp: { status_code: 0 },
+      }),
+    );
+
+    const result = await model.doGenerate({
+      prompt: 'x',
+      n: 1,
+      size: undefined,
+      aspectRatio: undefined,
+      seed: undefined,
+      files: [{ type: 'file', data: 'AAAA', mediaType: 'image/png' }],
+      mask: { type: 'file', data: 'BBBB', mediaType: 'image/png' },
+      providerOptions: {},
+    } as any);
+
+    expect(result.warnings.some(w => w.type === 'unsupported' && w.feature === 'files')).toBe(true);
+    expect(result.warnings.some(w => w.type === 'unsupported' && w.feature === 'mask')).toBe(true);
+  });
 });
