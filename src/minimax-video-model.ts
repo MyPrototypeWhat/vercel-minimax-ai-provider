@@ -47,7 +47,7 @@ const createTaskResponseSchema = z.object({
 const queryTaskResponseSchema = z.object({
   task_id: z.string().nullish(),
   status: z.string().nullish(),
-  file_id: z.string().nullish(),
+  file_id: z.union([z.string(), z.number()]).nullish(),
   video_width: z.number().nullish(),
   video_height: z.number().nullish(),
   base_resp: baseRespSchema,
@@ -82,6 +82,7 @@ export class MinimaxVideoModel implements Experimental_VideoModelV3 {
     const {
       prompt,
       n,
+      aspectRatio,
       resolution,
       duration,
       fps,
@@ -95,6 +96,13 @@ export class MinimaxVideoModel implements Experimental_VideoModelV3 {
 
     if (fps != null) {
       warnings.push({ type: 'unsupported', feature: 'fps' });
+    }
+    if (aspectRatio != null) {
+      warnings.push({
+        type: 'unsupported',
+        feature: 'aspectRatio',
+        details: 'MiniMax video uses resolution; aspectRatio ignored.',
+      });
     }
     if (n != null && n > 1) {
       warnings.push({
@@ -201,7 +209,7 @@ export class MinimaxVideoModel implements Experimental_VideoModelV3 {
       });
 
       if (status.status === 'Success') {
-        fileId = status.file_id ?? undefined;
+        fileId = status.file_id != null ? String(status.file_id) : undefined;
         width = status.video_width ?? undefined;
         height = status.video_height ?? undefined;
         break;

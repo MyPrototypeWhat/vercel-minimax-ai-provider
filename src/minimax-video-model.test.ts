@@ -119,6 +119,44 @@ describe('MinimaxVideoModel', () => {
     expect(createBody.first_frame_image).toBe('https://img/first.jpg');
   });
 
+  it('accepts a numeric file_id from the query response', async () => {
+    let retrieveUrl = '';
+    const model = makeModel(async url => {
+      const u = String(url);
+      if (u.includes('/video_generation') && !u.includes('/query/')) {
+        return jsonResponse({ task_id: 't', base_resp: { status_code: 0 } });
+      }
+      if (u.includes('/query/video_generation')) {
+        return jsonResponse({
+          task_id: 't',
+          status: 'Success',
+          file_id: 12345,
+          base_resp: { status_code: 0 },
+        });
+      }
+      retrieveUrl = u;
+      return jsonResponse({
+        file: { download_url: 'https://cdn/v.mp4' },
+        base_resp: { status_code: 0 },
+      });
+    });
+
+    const result = await model.doGenerate({
+      prompt: 'x',
+      n: 1,
+      aspectRatio: undefined,
+      resolution: undefined,
+      duration: undefined,
+      fps: undefined,
+      seed: undefined,
+      image: undefined,
+      providerOptions: fastPoll,
+    });
+
+    expect(retrieveUrl).toContain('file_id=12345');
+    expect(result.providerMetadata?.minimax).toMatchObject({ fileId: '12345' });
+  });
+
   it('throws when the task status is Fail', async () => {
     const model = makeModel(async (url) => {
       const u = String(url);
@@ -182,7 +220,7 @@ describe('MinimaxVideoModel', () => {
     const result = await model.doGenerate({
       prompt: 'x',
       n: 2,
-      aspectRatio: undefined,
+      aspectRatio: '16:9',
       resolution: undefined,
       duration: undefined,
       fps: 30,
@@ -193,5 +231,6 @@ describe('MinimaxVideoModel', () => {
 
     expect(result.warnings.some(w => w.type === 'unsupported' && w.feature === 'fps')).toBe(true);
     expect(result.warnings.some(w => w.type === 'unsupported' && w.feature === 'n')).toBe(true);
+    expect(result.warnings.some(w => w.type === 'unsupported' && w.feature === 'aspectRatio')).toBe(true);
   });
 });
