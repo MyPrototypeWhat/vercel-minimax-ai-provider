@@ -5,12 +5,11 @@ import {
 } from '@ai-sdk/provider';
 import {
   FetchFunction,
-  loadApiKey,
   withoutTrailingSlash,
-  withUserAgentSuffix,
 } from '@ai-sdk/provider-utils';
 import { MinimaxChatModelId } from './minimax-chat-options';
 import { MinimaxChatLanguageModel } from './minimax-openai-language-model';
+import { createBearerHeaders } from './minimax-shared';
 
 export interface MinimaxProviderSettings {
   /**
@@ -57,18 +56,7 @@ export function createMinimax(
     options.baseURL ?? 'https://api.minimax.io/v1',
   ) as string;
 
-  const getHeaders = () =>
-    withUserAgentSuffix(
-      {
-        Authorization: `Bearer ${loadApiKey({
-          apiKey: options.apiKey,
-          environmentVariableName: 'MINIMAX_API_KEY',
-          description: 'MiniMax API key',
-        })}`,
-        ...options.headers,
-      },
-      `minimax-ai-provider`,
-    );
+  const getHeaders = createBearerHeaders(options);
 
   const createLanguageModel = (modelId: MinimaxChatModelId) => {
     return new MinimaxChatLanguageModel(modelId, {
