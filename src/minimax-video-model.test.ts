@@ -224,7 +224,7 @@ describe('MinimaxVideoModel', () => {
       resolution: undefined,
       duration: undefined,
       fps: 30,
-      seed: undefined,
+      seed: 42,
       image: undefined,
       providerOptions: fastPoll,
     });
@@ -232,5 +232,72 @@ describe('MinimaxVideoModel', () => {
     expect(result.warnings.some(w => w.type === 'unsupported' && w.feature === 'fps')).toBe(true);
     expect(result.warnings.some(w => w.type === 'unsupported' && w.feature === 'n')).toBe(true);
     expect(result.warnings.some(w => w.type === 'unsupported' && w.feature === 'aspectRatio')).toBe(true);
+    expect(result.warnings.some(w => w.type === 'unsupported' && w.feature === 'seed')).toBe(true);
+  });
+
+  it('does not send seed in the request body', async () => {
+    let createBody: any;
+    const model = makeModel(async (url, init) => {
+      const u = String(url);
+      if (u.includes('/video_generation') && !u.includes('/query/')) {
+        createBody = JSON.parse((init as RequestInit).body as string);
+        return jsonResponse({ task_id: 't', base_resp: { status_code: 0 } });
+      }
+      if (u.includes('/query/video_generation')) {
+        return jsonResponse({ task_id: 't', status: 'Success', file_id: 'f', base_resp: { status_code: 0 } });
+      }
+      return jsonResponse({ file: { download_url: 'https://cdn/v.mp4' }, base_resp: { status_code: 0 } });
+    });
+
+    await model.doGenerate({
+      prompt: 'x',
+      n: 1,
+      aspectRatio: undefined,
+      resolution: undefined,
+      duration: undefined,
+      fps: undefined,
+      seed: 42,
+      image: undefined,
+      providerOptions: fastPoll,
+    });
+
+    expect('seed' in createBody).toBe(false);
+  });
+
+  it('warns when a -Fast (image-to-video only) model is used without an image', async () => {
+    const model = new MinimaxVideoModel('MiniMax-Hailuo-2.3-Fast', {
+      provider: 'minimax.video',
+      url: ({ path }) => `https://api.minimax.io/v1${path}`,
+      headers: () => ({ Authorization: 'Bearer test-key' }),
+      fetch: (async (url: string) => {
+        const u = String(url);
+        if (u.includes('/video_generation') && !u.includes('/query/')) {
+          return jsonResponse({ task_id: 't', base_resp: { status_code: 0 } });
+        }
+        if (u.includes('/query/video_generation')) {
+          return jsonResponse({ task_id: 't', status: 'Success', file_id: 'f', base_resp: { status_code: 0 } });
+        }
+        return jsonResponse({ file: { download_url: 'https://cdn/v.mp4' }, base_resp: { status_code: 0 } });
+      }) as unknown as typeof fetch,
+      _internal: { currentDate: () => TEST_DATE },
+    });
+
+    const result = await model.doGenerate({
+      prompt: 'x',
+      n: 1,
+      aspectRatio: undefined,
+      resolution: undefined,
+      duration: undefined,
+      fps: undefined,
+      seed: undefined,
+      image: undefined,
+      providerOptions: fastPoll,
+    });
+
+    expect(
+      result.warnings.some(
+        w => w.type === 'other' && /image-to-video only/.test(w.message),
+      ),
+    ).toBe(true);
   });
 });

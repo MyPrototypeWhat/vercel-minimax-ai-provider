@@ -97,6 +97,13 @@ export class MinimaxVideoModel implements Experimental_VideoModelV3 {
     if (fps != null) {
       warnings.push({ type: 'unsupported', feature: 'fps' });
     }
+    if (seed != null) {
+      warnings.push({
+        type: 'unsupported',
+        feature: 'seed',
+        details: 'MiniMax video generation does not support a seed parameter.',
+      });
+    }
     if (aspectRatio != null) {
       warnings.push({
         type: 'unsupported',
@@ -124,7 +131,6 @@ export class MinimaxVideoModel implements Experimental_VideoModelV3 {
       model: this.modelId,
       prompt,
       duration,
-      seed,
       prompt_optimizer: opts.promptOptimizer,
       fast_pretreatment: opts.fastPretreatment,
       aigc_watermark: opts.aigcWatermark,
@@ -140,6 +146,13 @@ export class MinimaxVideoModel implements Experimental_VideoModelV3 {
         image.type === 'url'
           ? image.url
           : convertImageModelFileToDataUri(image);
+    } else if (/-Fast$/.test(this.modelId)) {
+      // MiniMax's "-Fast" Hailuo models are image-to-video only; without a
+      // first frame the text-to-video endpoint rejects them.
+      warnings.push({
+        type: 'other',
+        message: `Model "${this.modelId}" is image-to-video only; provide an \`image\` (first frame) or use a text-to-video model such as "MiniMax-Hailuo-2.3".`,
+      });
     }
 
     const reqHeaders = combineHeaders(this.config.headers(), headers);
