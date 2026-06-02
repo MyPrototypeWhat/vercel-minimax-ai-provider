@@ -34,7 +34,7 @@ export interface MinimaxVideoModelConfig {
 
 const baseRespSchema = z
   .object({
-    status_code: z.number().nullish(),
+    status_code: z.union([z.number(), z.string()]).nullish(),
     status_msg: z.string().nullish(),
   })
   .nullish();
@@ -48,8 +48,8 @@ const queryTaskResponseSchema = z.object({
   task_id: z.string().nullish(),
   status: z.string().nullish(),
   file_id: z.union([z.string(), z.number()]).nullish(),
-  video_width: z.number().nullish(),
-  video_height: z.number().nullish(),
+  video_width: z.union([z.number(), z.string()]).nullish(),
+  video_height: z.union([z.number(), z.string()]).nullish(),
   base_resp: baseRespSchema,
 });
 
@@ -223,8 +223,10 @@ export class MinimaxVideoModel implements Experimental_VideoModelV3 {
 
       if (status.status === 'Success') {
         fileId = status.file_id != null ? String(status.file_id) : undefined;
-        width = status.video_width ?? undefined;
-        height = status.video_height ?? undefined;
+        width =
+          status.video_width != null ? Number(status.video_width) : undefined;
+        height =
+          status.video_height != null ? Number(status.video_height) : undefined;
         break;
       }
       if (status.status === 'Fail') {

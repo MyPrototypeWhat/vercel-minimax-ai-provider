@@ -92,6 +92,24 @@ describe('checkMinimaxBaseResp', () => {
     ).toThrow(APICallError);
   });
 
+  it('does not throw when status_code is the string "0"', () => {
+    expect(() =>
+      checkMinimaxBaseResp(
+        { status_code: '0', status_msg: 'success' },
+        { url: 'https://x', requestBodyValues: {} },
+      ),
+    ).not.toThrow();
+  });
+
+  it('throws when status_code is a non-zero string', () => {
+    expect(() =>
+      checkMinimaxBaseResp(
+        { status_code: '1004', status_msg: 'auth failed' },
+        { url: 'https://x', requestBodyValues: {} },
+      ),
+    ).toThrow(APICallError);
+  });
+
   it('does not throw when base_resp is missing', () => {
     expect(() =>
       checkMinimaxBaseResp(undefined, { url: 'https://x', requestBodyValues: {} }),

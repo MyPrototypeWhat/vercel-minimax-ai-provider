@@ -29,7 +29,7 @@ export function createBearerHeaders(options: {
  * business-layer error returned with HTTP 200.
  */
 export interface MinimaxBaseResp {
-  status_code?: number | null;
+  status_code?: number | string | null;
   status_msg?: string | null;
 }
 
@@ -121,7 +121,9 @@ export function checkMinimaxBaseResp(
   context: { url: string; requestBodyValues: unknown; responseBody?: string },
 ): void {
   if (baseResp == null) return;
-  if (baseResp.status_code != null && baseResp.status_code !== 0) {
+  // MiniMax may serialize status_code as a number or a string; coerce so "0"
+  // is treated as success, not a spurious error.
+  if (baseResp.status_code != null && Number(baseResp.status_code) !== 0) {
     throw new APICallError({
       message: baseResp.status_msg ?? `MiniMax error ${baseResp.status_code}`,
       url: context.url,

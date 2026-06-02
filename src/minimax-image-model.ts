@@ -33,15 +33,17 @@ const minimaxImageResponseSchema = z.object({
       image_urls: z.array(z.string()).nullish(),
     })
     .nullish(),
+  // MiniMax returns these counts as quoted strings (e.g. "3"); accept either,
+  // and stay lenient since this metadata is not consumed.
   metadata: z
     .object({
-      success_count: z.number().nullish(),
-      failed_count: z.number().nullish(),
+      success_count: z.union([z.number(), z.string()]).nullish(),
+      failed_count: z.union([z.number(), z.string()]).nullish(),
     })
     .nullish(),
   base_resp: z
     .object({
-      status_code: z.number().nullish(),
+      status_code: z.union([z.number(), z.string()]).nullish(),
       status_msg: z.string().nullish(),
     })
     .nullish(),

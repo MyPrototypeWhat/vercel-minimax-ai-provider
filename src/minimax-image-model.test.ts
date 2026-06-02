@@ -34,8 +34,10 @@ describe('MinimaxImageModel', () => {
     const model = makeModel(async (_url, init) => {
       captured = JSON.parse((init as RequestInit).body as string);
       return jsonResponse({
+        id: '03ff3cd0820949eb8a410056b5f21d38',
         data: { image_base64: ['AAAA', 'BBBB'] },
-        metadata: { success_count: 2, failed_count: 0 },
+        // MiniMax returns these counts as quoted strings, not numbers.
+        metadata: { success_count: '2', failed_count: '0' },
         base_resp: { status_code: 0, status_msg: 'success' },
       });
     });

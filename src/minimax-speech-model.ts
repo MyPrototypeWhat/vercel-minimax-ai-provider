@@ -36,13 +36,13 @@ const minimaxSpeechResponseSchema = z.object({
   data: z
     .object({
       audio: z.string().nullish(),
-      status: z.number().nullish(),
+      status: z.union([z.number(), z.string()]).nullish(),
     })
     .nullish(),
   extra_info: z.record(z.string(), z.unknown()).nullish(),
   base_resp: z
     .object({
-      status_code: z.number().nullish(),
+      status_code: z.union([z.number(), z.string()]).nullish(),
       status_msg: z.string().nullish(),
     })
     .nullish(),
