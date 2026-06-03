@@ -66,6 +66,16 @@ describe('mapLanguageBoost', () => {
     expect(mapLanguageBoost('ja')).toBe('Japanese');
   });
 
+  it('maps the full documented language set, including aliases', () => {
+    expect(mapLanguageBoost('yue')).toBe('Chinese,Yue');
+    expect(mapLanguageBoost('sv')).toBe('Swedish');
+    expect(mapLanguageBoost('fa')).toBe('Persian');
+    expect(mapLanguageBoost('fil')).toBe('Filipino');
+    expect(mapLanguageBoost('tl')).toBe('Filipino');
+    expect(mapLanguageBoost('nb')).toBe('Norwegian');
+    expect(mapLanguageBoost('af')).toBe('Afrikaans');
+  });
+
   it('is case-insensitive', () => {
     expect(mapLanguageBoost('EN')).toBe('English');
   });

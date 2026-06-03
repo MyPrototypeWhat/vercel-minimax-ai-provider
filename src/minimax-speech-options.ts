@@ -18,7 +18,11 @@ export const minimaxSpeechProviderOptions = z.object({
   vol: z.number().optional(),
   /** Pitch, range [-12, 12]. */
   pitch: z.number().optional(),
-  /** Emotion, e.g. "happy", "sad", "neutral". */
+  /**
+   * Emotion. One of: "happy", "sad", "angry", "fearful", "disgusted",
+   * "surprised", "calm" (neutral), "fluent", "whisper". Note: "fluent" and
+   * "whisper" are only supported by some models.
+   */
   emotion: z.string().optional(),
   /** Output sample rate in Hz, e.g. 32000. */
   sampleRate: z.number().optional(),
