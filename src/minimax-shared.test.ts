@@ -44,12 +44,18 @@ describe('mapVideoResolution', () => {
     expect(mapVideoResolution('1080x1920')).toBe('1080P');
   });
 
-  it('maps 720p sizes to "720P"', () => {
-    expect(mapVideoResolution('1280x720')).toBe('720P');
+  it('maps 768p sizes to "768P"', () => {
+    expect(mapVideoResolution('1366x768')).toBe('768P');
+    expect(mapVideoResolution('768x1366')).toBe('768P');
   });
 
-  it('passes through an unknown size unchanged', () => {
-    expect(mapVideoResolution('640x640')).toBe('640x640');
+  it('maps 720p sizes to "768P" (MiniMax has no 720P label for Hailuo models)', () => {
+    expect(mapVideoResolution('1280x720')).toBe('768P');
+    expect(mapVideoResolution('720x1280')).toBe('768P');
+  });
+
+  it('returns undefined for an unrecognized size', () => {
+    expect(mapVideoResolution('640x640')).toBeUndefined();
   });
 });
 

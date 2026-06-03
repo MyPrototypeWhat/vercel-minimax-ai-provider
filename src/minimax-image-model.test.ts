@@ -198,6 +198,36 @@ describe('MinimaxImageModel', () => {
     ]);
   });
 
+  it('maps all input files to subject_reference entries', async () => {
+    let captured: any;
+    const model = makeModel(async (_url, init) => {
+      captured = JSON.parse((init as RequestInit).body as string);
+      return jsonResponse({
+        data: { image_base64: ['AAAA'] },
+        base_resp: { status_code: 0 },
+      });
+    });
+
+    await model.doGenerate({
+      prompt: 'x',
+      n: 1,
+      size: undefined,
+      aspectRatio: undefined,
+      seed: undefined,
+      files: [
+        { type: 'file', data: 'QUFBQQ==', mediaType: 'image/png' },
+        { type: 'file', data: 'QkJCQg==', mediaType: 'image/png' },
+      ],
+      mask: undefined,
+      providerOptions: {},
+    });
+
+    expect(captured.subject_reference).toEqual([
+      { type: 'character', image_file: 'data:image/png;base64,QUFBQQ==' },
+      { type: 'character', image_file: 'data:image/png;base64,QkJCQg==' },
+    ]);
+  });
+
   it('lets providerOptions.subjectReference override files', async () => {
     let captured: any;
     const model = makeModel(async (_url, init) => {

@@ -398,7 +398,6 @@ export class MinimaxChatLanguageModel implements LanguageModelV3 {
       promptTokensDetails: {
         cachedTokens: number | undefined;
       };
-      totalTokens: number | undefined;
     } = {
       completionTokens: undefined,
       completionTokensDetails: {
@@ -410,7 +409,6 @@ export class MinimaxChatLanguageModel implements LanguageModelV3 {
       promptTokensDetails: {
         cachedTokens: undefined,
       },
-      totalTokens: undefined,
     };
     let isFirstChunk = true;
     const providerOptionsName = this.providerOptionsName;
@@ -460,14 +458,12 @@ export class MinimaxChatLanguageModel implements LanguageModelV3 {
               const {
                 prompt_tokens,
                 completion_tokens,
-                total_tokens,
                 prompt_tokens_details,
                 completion_tokens_details,
               } = value.usage;
 
               usage.promptTokens = prompt_tokens ?? undefined;
               usage.completionTokens = completion_tokens ?? undefined;
-              usage.totalTokens = total_tokens ?? undefined;
               if (completion_tokens_details?.reasoning_tokens != null) {
                 usage.completionTokensDetails.reasoningTokens =
                   completion_tokens_details?.reasoning_tokens;

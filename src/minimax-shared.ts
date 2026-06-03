@@ -56,20 +56,24 @@ export function deriveV1BaseURL(baseURL: string): string {
 }
 
 /**
- * MiniMax video resolution is a label ("720P"/"768P"/"1080P"), not WxH. Map a
- * `${w}x${h}` size to the closest label; pass through unknown values unchanged.
+ * MiniMax video resolution is a label ("768P"/"1080P"), not WxH. Map a
+ * `${w}x${h}` size to the nearest supported label. Returns `undefined` for an
+ * unrecognized size so the caller can warn and omit it (the API only accepts
+ * the documented labels, so forwarding a raw `WxH` string would be rejected).
+ *
+ * Note: the Hailuo models support 768P and 1080P; 720p inputs map to 768P.
  */
 const RESOLUTION_MAP: Record<string, string> = {
   '1920x1080': '1080P',
   '1080x1920': '1080P',
-  '1280x720': '720P',
-  '720x1280': '720P',
   '1366x768': '768P',
   '768x1366': '768P',
+  '1280x720': '768P',
+  '720x1280': '768P',
 };
 
-export function mapVideoResolution(size: string): string {
-  return RESOLUTION_MAP[size] ?? size;
+export function mapVideoResolution(size: string): string | undefined {
+  return RESOLUTION_MAP[size];
 }
 
 /**

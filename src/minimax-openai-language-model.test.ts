@@ -79,6 +79,66 @@ describe('MinimaxChatLanguageModel usage/finishReason migration', () => {
 
     expect(result.finishReason).toEqual({ unified: 'other', raw: 'weird' });
   });
+
+  it('emits the v3 finishReason and nested usage shape in the stream', async () => {
+    const chunks = [
+      {
+        id: 'c1',
+        model: 'MiniMax-M2',
+        choices: [{ delta: { role: 'assistant', content: 'hi' } }],
+      },
+      {
+        id: 'c1',
+        model: 'MiniMax-M2',
+        choices: [{ delta: {}, finish_reason: 'stop' }],
+        usage: {
+          prompt_tokens: 10,
+          completion_tokens: 5,
+          total_tokens: 15,
+          prompt_tokens_details: { cached_tokens: 4 },
+          completion_tokens_details: { reasoning_tokens: 2 },
+        },
+      },
+    ];
+    const sse =
+      chunks.map(c => `data: ${JSON.stringify(c)}\n\n`).join('') +
+      'data: [DONE]\n\n';
+
+    const model = makeModel(async () =>
+      new Response(sse, {
+        status: 200,
+        headers: { 'content-type': 'text/event-stream' },
+      }),
+    );
+
+    const { stream } = await model.doStream({
+      prompt: [{ role: 'user', content: [{ type: 'text', text: 'hello' }] }],
+      includeRawChunks: false,
+    });
+
+    const parts: any[] = [];
+    const reader = stream.getReader();
+    for (;;) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      parts.push(value);
+    }
+
+    const finish = parts.find(p => p.type === 'finish');
+    expect(finish).toBeDefined();
+    expect(finish.finishReason).toEqual({ unified: 'stop', raw: 'stop' });
+    expect(finish.usage.inputTokens).toEqual({
+      total: 10,
+      noCache: undefined,
+      cacheRead: 4,
+      cacheWrite: undefined,
+    });
+    expect(finish.usage.outputTokens).toEqual({
+      total: 5,
+      text: undefined,
+      reasoning: 2,
+    });
+  });
 });
 
 describe('convertToMinimaxChatMessages tool-message migration', () => {

@@ -93,8 +93,9 @@ export class MinimaxImageModel implements ImageModelV3 {
 
     // Image-to-image: the SDK delivers input images via `files` (from
     // `generateImage({ prompt: { images: [...] } })`). MiniMax expects them as
-    // `subject_reference` entries. An explicit `providerOptions.subjectReference`
-    // takes precedence when provided.
+    // `subject_reference` entries (a `character` subject array; the API does not
+    // document a maximum, so all input images are forwarded). An explicit
+    // `providerOptions.subjectReference` takes precedence when provided.
     const subjectReference =
       options.subjectReference ??
       (files != null && files.length > 0

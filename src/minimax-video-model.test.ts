@@ -119,6 +119,88 @@ describe('MinimaxVideoModel', () => {
     expect(createBody.first_frame_image).toBe('https://img/first.jpg');
   });
 
+  it('coerces string-encoded video_width/video_height to numbers', async () => {
+    const model = makeModel(async url => {
+      const u = String(url);
+      if (u.includes('/video_generation') && !u.includes('/query/')) {
+        return jsonResponse({ task_id: 't', base_resp: { status_code: 0 } });
+      }
+      if (u.includes('/query/video_generation')) {
+        return jsonResponse({
+          task_id: 't',
+          status: 'Success',
+          file_id: 'f',
+          video_width: '1280',
+          video_height: '720',
+          base_resp: { status_code: 0 },
+        });
+      }
+      return jsonResponse({
+        file: { download_url: 'https://cdn/v.mp4' },
+        base_resp: { status_code: 0 },
+      });
+    });
+
+    const result = await model.doGenerate({
+      prompt: 'x',
+      n: 1,
+      aspectRatio: undefined,
+      resolution: undefined,
+      duration: undefined,
+      fps: undefined,
+      seed: undefined,
+      image: undefined,
+      providerOptions: fastPoll,
+    });
+
+    expect(result.providerMetadata?.minimax).toMatchObject({
+      width: 1280,
+      height: 720,
+    });
+  });
+
+  it('warns and omits resolution for an unsupported size', async () => {
+    let createBody: any;
+    const model = makeModel(async (url, init) => {
+      const u = String(url);
+      if (u.includes('/video_generation') && !u.includes('/query/')) {
+        createBody = JSON.parse((init as RequestInit).body as string);
+        return jsonResponse({ task_id: 't', base_resp: { status_code: 0 } });
+      }
+      if (u.includes('/query/video_generation')) {
+        return jsonResponse({
+          task_id: 't',
+          status: 'Success',
+          file_id: 'f',
+          base_resp: { status_code: 0 },
+        });
+      }
+      return jsonResponse({
+        file: { download_url: 'https://cdn/v.mp4' },
+        base_resp: { status_code: 0 },
+      });
+    });
+
+    const result = await model.doGenerate({
+      prompt: 'x',
+      n: 1,
+      aspectRatio: undefined,
+      resolution: '640x640',
+      duration: undefined,
+      fps: undefined,
+      seed: undefined,
+      image: undefined,
+      providerOptions: fastPoll,
+    });
+
+    expect('resolution' in createBody).toBe(false);
+    expect(
+      result.warnings.some(
+        w => w.type === 'unsupported' && w.feature === 'resolution',
+      ),
+    ).toBe(true);
+  });
+
   it('accepts a numeric file_id from the query response', async () => {
     let retrieveUrl = '';
     const model = makeModel(async url => {

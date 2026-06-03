@@ -63,6 +63,17 @@ const fileRetrieveResponseSchema = z.object({
   base_resp: baseRespSchema,
 });
 
+/**
+ * Coerces a string|number dimension to a finite number, or undefined when it is
+ * absent or not a valid number (avoids leaking NaN into providerMetadata, which
+ * must be JSON-serializable).
+ */
+function toFiniteNumber(value: number | string | null | undefined): number | undefined {
+  if (value == null) return undefined;
+  const n = Number(value);
+  return Number.isFinite(n) ? n : undefined;
+}
+
 export class MinimaxVideoModel implements Experimental_VideoModelV3 {
   readonly specificationVersion = 'v3';
   readonly maxVideosPerCall = 1;
@@ -138,7 +149,16 @@ export class MinimaxVideoModel implements Experimental_VideoModelV3 {
     };
 
     if (resolution != null) {
-      body.resolution = mapVideoResolution(resolution);
+      const mapped = mapVideoResolution(resolution);
+      if (mapped != null) {
+        body.resolution = mapped;
+      } else {
+        warnings.push({
+          type: 'unsupported',
+          feature: 'resolution',
+          details: `Unsupported resolution "${resolution}"; MiniMax accepts 768P (1280x720 / 1366x768) or 1080P (1920x1080). Using the model default.`,
+        });
+      }
     }
 
     if (image != null) {
@@ -223,10 +243,8 @@ export class MinimaxVideoModel implements Experimental_VideoModelV3 {
 
       if (status.status === 'Success') {
         fileId = status.file_id != null ? String(status.file_id) : undefined;
-        width =
-          status.video_width != null ? Number(status.video_width) : undefined;
-        height =
-          status.video_height != null ? Number(status.video_height) : undefined;
+        width = toFiniteNumber(status.video_width);
+        height = toFiniteNumber(status.video_height);
         break;
       }
       if (status.status === 'Fail') {
