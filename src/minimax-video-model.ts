@@ -148,7 +148,11 @@ export class MinimaxVideoModel implements Experimental_VideoModelV3 {
       callback_url: opts.callbackUrl,
     };
 
-    if (resolution != null) {
+    // Resolution: MiniMax expects a label (e.g. '768P'/'1080P'), not WxH. Prefer
+    // an explicit provider-option label; otherwise best-effort map the SDK's WxH.
+    if (opts.resolution != null) {
+      body.resolution = opts.resolution;
+    } else if (resolution != null) {
       const mapped = mapVideoResolution(resolution);
       if (mapped != null) {
         body.resolution = mapped;
@@ -156,7 +160,7 @@ export class MinimaxVideoModel implements Experimental_VideoModelV3 {
         warnings.push({
           type: 'unsupported',
           feature: 'resolution',
-          details: `Unsupported resolution "${resolution}"; MiniMax accepts 768P (1280x720 / 1366x768) or 1080P (1920x1080). Using the model default.`,
+          details: `Could not map resolution "${resolution}" to a MiniMax label. Supported labels are 768P and 1080P (plus 512P on MiniMax-Hailuo-02); pass one via providerOptions.minimax.resolution. Using the model default.`,
         });
       }
     }

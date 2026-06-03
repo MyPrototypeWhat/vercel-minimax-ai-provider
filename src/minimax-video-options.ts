@@ -20,6 +20,12 @@ export const minimaxVideoProviderOptions = z.object({
   aigcWatermark: z.boolean().optional(),
   /** Async completion callback URL. */
   callbackUrl: z.string().optional(),
+  /**
+   * MiniMax resolution label, sent verbatim. Use this for exact control over the
+   * documented labels ('512P' | '768P' | '1080P'; '512P' is MiniMax-Hailuo-02 only).
+   * Takes precedence over the SDK `resolution` (WxH) call option.
+   */
+  resolution: z.string().optional(),
   /** Poll interval in ms while waiting for the video. Default 5000. */
   pollIntervalMs: z.number().positive().optional(),
   /** Poll timeout in ms before giving up. Default 600000. */

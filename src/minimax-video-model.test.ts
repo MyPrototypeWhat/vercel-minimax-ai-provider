@@ -201,6 +201,43 @@ describe('MinimaxVideoModel', () => {
     ).toBe(true);
   });
 
+  it('sends an explicit providerOptions.resolution label verbatim (overrides WxH)', async () => {
+    let createBody: any;
+    const model = makeModel(async (url, init) => {
+      const u = String(url);
+      if (u.includes('/video_generation') && !u.includes('/query/')) {
+        createBody = JSON.parse((init as RequestInit).body as string);
+        return jsonResponse({ task_id: 't', base_resp: { status_code: 0 } });
+      }
+      if (u.includes('/query/video_generation')) {
+        return jsonResponse({
+          task_id: 't',
+          status: 'Success',
+          file_id: 'f',
+          base_resp: { status_code: 0 },
+        });
+      }
+      return jsonResponse({
+        file: { download_url: 'https://cdn/v.mp4' },
+        base_resp: { status_code: 0 },
+      });
+    });
+
+    await model.doGenerate({
+      prompt: 'x',
+      n: 1,
+      aspectRatio: undefined,
+      resolution: '1920x1080', // would map to 1080P, but the option wins
+      duration: undefined,
+      fps: undefined,
+      seed: undefined,
+      image: undefined,
+      providerOptions: { minimax: { ...fastPoll.minimax, resolution: '512P' } },
+    });
+
+    expect(createBody.resolution).toBe('512P');
+  });
+
   it('accepts a numeric file_id from the query response', async () => {
     let retrieveUrl = '';
     const model = makeModel(async url => {

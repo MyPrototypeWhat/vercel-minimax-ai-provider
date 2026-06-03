@@ -185,8 +185,15 @@ const { videos } = await generateVideo({
   model: minimax.video('MiniMax-Hailuo-2.3'),
   prompt: 'A dog running through a field of flowers',
   duration: 6, // 6 or 10
-  resolution: '1920x1080', // mapped to MiniMax labels (768P, 1080P)
-  providerOptions: { minimax: { pollIntervalMs: 5000, pollTimeoutMs: 600000 } },
+  resolution: '1920x1080', // best-effort mapped to a MiniMax label (768P / 1080P)
+  providerOptions: {
+    minimax: {
+      // Or set the MiniMax label directly (takes precedence): '512P' | '768P' | '1080P'
+      // resolution: '1080P',
+      pollIntervalMs: 5000,
+      pollTimeoutMs: 600000,
+    },
+  },
 });
 // videos[0] is a URL-backed video
 ```
