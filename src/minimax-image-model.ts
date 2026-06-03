@@ -4,6 +4,7 @@ import {
 } from '@ai-sdk/provider';
 import {
   combineHeaders,
+  convertImageModelFileToDataUri,
   createJsonResponseHandler,
   createJsonErrorResponseHandler,
   FetchFunction,
@@ -78,16 +79,7 @@ export class MinimaxImageModel implements ImageModelV3 {
   > {
     const warnings: Array<SharedV3Warning> = [];
 
-    // This is a text-to-image model; image-to-image is expressed via the
-    // `subjectReference` provider option, not the SDK's edit-style inputs.
-    if (files != null) {
-      warnings.push({
-        type: 'unsupported',
-        feature: 'files',
-        details:
-          'Image editing inputs are not supported. Use the subjectReference provider option for image-to-image.',
-      });
-    }
+    // MiniMax has no inpainting/mask support.
     if (mask != null) {
       warnings.push({ type: 'unsupported', feature: 'mask' });
     }
@@ -99,6 +91,19 @@ export class MinimaxImageModel implements ImageModelV3 {
         schema: minimaxImageProviderOptions,
       })) ?? {};
 
+    // Image-to-image: the SDK delivers input images via `files` (from
+    // `generateImage({ prompt: { images: [...] } })`). MiniMax expects them as
+    // `subject_reference` entries. An explicit `providerOptions.subjectReference`
+    // takes precedence when provided.
+    const subjectReference =
+      options.subjectReference ??
+      (files != null && files.length > 0
+        ? files.map(file => ({
+            type: 'character' as const,
+            image_file: convertImageModelFileToDataUri(file),
+          }))
+        : undefined);
+
     const body: Record<string, unknown> = {
       model: this.modelId,
       prompt,
@@ -108,7 +113,7 @@ export class MinimaxImageModel implements ImageModelV3 {
       prompt_optimizer: options.promptOptimizer,
       aigc_watermark: options.aigcWatermark,
       style: options.style,
-      subject_reference: options.subjectReference,
+      subject_reference: subjectReference,
     };
 
     // size and aspect_ratio are mutually exclusive server-side; size wins.

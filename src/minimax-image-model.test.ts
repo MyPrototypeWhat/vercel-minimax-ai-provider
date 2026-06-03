@@ -172,7 +172,65 @@ describe('MinimaxImageModel', () => {
     ).rejects.toThrow(/auth failed/);
   });
 
-  it('warns when unsupported files/mask inputs are provided', async () => {
+  it('maps files (image-to-image input) to subject_reference', async () => {
+    let captured: any;
+    const model = makeModel(async (_url, init) => {
+      captured = JSON.parse((init as RequestInit).body as string);
+      return jsonResponse({
+        data: { image_base64: ['AAAA'] },
+        base_resp: { status_code: 0 },
+      });
+    });
+
+    await model.doGenerate({
+      prompt: 'make it watercolor',
+      n: 1,
+      size: undefined,
+      aspectRatio: undefined,
+      seed: undefined,
+      files: [{ type: 'file', data: 'QUFBQQ==', mediaType: 'image/png' }],
+      mask: undefined,
+      providerOptions: {},
+    });
+
+    expect(captured.subject_reference).toEqual([
+      { type: 'character', image_file: 'data:image/png;base64,QUFBQQ==' },
+    ]);
+  });
+
+  it('lets providerOptions.subjectReference override files', async () => {
+    let captured: any;
+    const model = makeModel(async (_url, init) => {
+      captured = JSON.parse((init as RequestInit).body as string);
+      return jsonResponse({
+        data: { image_base64: ['AAAA'] },
+        base_resp: { status_code: 0 },
+      });
+    });
+
+    await model.doGenerate({
+      prompt: 'x',
+      n: 1,
+      size: undefined,
+      aspectRatio: undefined,
+      seed: undefined,
+      files: [{ type: 'file', data: 'QUFBQQ==', mediaType: 'image/png' }],
+      mask: undefined,
+      providerOptions: {
+        minimax: {
+          subjectReference: [
+            { type: 'character', image_file: 'https://img/override.jpg' },
+          ],
+        },
+      },
+    });
+
+    expect(captured.subject_reference).toEqual([
+      { type: 'character', image_file: 'https://img/override.jpg' },
+    ]);
+  });
+
+  it('warns when an unsupported mask input is provided', async () => {
     const model = makeModel(async () =>
       jsonResponse({
         data: { image_base64: ['AAAA'] },
@@ -186,12 +244,13 @@ describe('MinimaxImageModel', () => {
       size: undefined,
       aspectRatio: undefined,
       seed: undefined,
-      files: [{ type: 'file', data: 'AAAA', mediaType: 'image/png' }],
+      files: undefined,
       mask: { type: 'file', data: 'BBBB', mediaType: 'image/png' },
       providerOptions: {},
-    } as any);
+    });
 
-    expect(result.warnings.some(w => w.type === 'unsupported' && w.feature === 'files')).toBe(true);
-    expect(result.warnings.some(w => w.type === 'unsupported' && w.feature === 'mask')).toBe(true);
+    expect(
+      result.warnings.some(w => w.type === 'unsupported' && w.feature === 'mask'),
+    ).toBe(true);
   });
 });

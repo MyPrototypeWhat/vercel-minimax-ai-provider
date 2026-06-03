@@ -123,7 +123,22 @@ const { images } = await generateImage({
 // images[0].uint8Array / images[0].base64
 ```
 
-For image-to-image, pass a subject reference via provider options:
+For image-to-image, pass the input image(s) via the structured `prompt` — the
+AI SDK delivers them to the model and this provider maps them to MiniMax's
+subject reference:
+
+```ts
+await generateImage({
+  model: minimax.image('image-01'),
+  prompt: {
+    text: 'The same character riding a bicycle',
+    images: [inputImage], // Uint8Array, base64 string, or a URL
+  },
+});
+```
+
+You can also pass the subject reference explicitly via provider options (this
+overrides `prompt.images`):
 
 ```ts
 await generateImage({
